@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PerspectiveLens | Clarity</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Playfair+Display:ital@1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0a0a0a; color: #f4f4f4; }
+        .serif { font-family: 'Playfair Display', serif; }
+        .glass { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .fade-in { transition: opacity 0.5s ease; }
+        .stark-border { border-left: 2px solid #ffffff; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-6 pb-32">
+
+    <!-- Header / Gratitude Hook -->
+    <header class="w-full max-w-md mt-12 mb-16">
+        <p class="text-[10px] uppercase tracking-[0.4em] text-gray-500 mb-4">PerspectiveLens</p>
+        <h1 id="gratitude-hook" class="serif text-3xl leading-snug italic text-white fade-in opacity-100">
+            "Your monthly rent could pay for an entire year of schooling for three children in South Sudan."
+        </h1>
+    </header>
+
+    <!-- Main Logic -->
+    <main class="w-full max-w-md space-y-12">
+        
+        <!-- User Baseline Input -->
+        <section>
+            <label class="text-[10px] uppercase tracking-widest text-gray-500 block mb-4">Monthly Income (USD)</label>
+            <div class="flex items-end gap-4">
+                <span class="text-4xl font-light text-gray-400">$</span>
+                <input type="number" id="incomeInput" value="3500" 
+                    class="bg-transparent text-5xl font-bold w-full border-b border-gray-800 focus:border-white outline-none transition-colors pb-2">
+            </div>
+        </section>
+
+        <!-- Selectors -->
+        <section class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="text-[10px] uppercase tracking-widest text-gray-500 block mb-2">Compare With</label>
+                <select id="countrySelect" class="w-full bg-transparent border border-gray-800 p-3 rounded-none outline-none appearance-none cursor-pointer hover:border-white transition"></select>
+            </div>
+            <div>
+                <label class="text-[10px] uppercase tracking-widest text-gray-500 block mb-2">Social Class</label>
+                <select id="modeToggle" class="w-full bg-transparent border border-gray-800 p-3 rounded-none outline-none appearance-none cursor-pointer hover:border-white transition">
+                    <option value="average" class="bg-black">Average Citizen</option>
+                    <option value="top1" class="bg-black">Top 1% Wealthy</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Result Visuals -->
+        <section id="results" class="space-y-8 pt-8 border-t border-gray-900">
+            <div class="space-y-4">
+                <div class="flex justify-between items-end">
+                    <h3 class="text-gray-400 text-sm tracking-wide">Global Standing</h3>
+                    <span id="pppMultiplier" class="text-[10px] text-white bg-white/10 px-2 py-1 uppercase tracking-widest">--</span>
+                </div>
+                <div class="glass p-6">
+                    <p class="text-xs text-gray-400 mb-2 uppercase tracking-tighter">Adjusted Purchasing Power</p>
+                    <div class="flex items-center gap-2">
+                        <span id="localValue" class="text-4xl font-bold text-white tracking-tighter">$0</span>
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-4 leading-relaxed">
+                        This is the equivalent "feel" of your lifestyle in <span class="target-country-name underline text-gray-300">...</span> based on local costs.
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-gray-400 text-sm tracking-wide">Wealth Percentile</h3>
+                <div id="pictogram" class="grid grid-cols-10 gap-2"></div>
+                <p id="percentileText" class="text-xs text-gray-500 italic"></p>
+            </div>
+
+            <div class="stark-border pl-6 py-2">
+                <p class="text-xl text-white font-light leading-relaxed">
+                    That $5 daily coffee? In <span class="target-country-name font-bold">...</span>, that pays for <span id="dailyBenefit" class="text-white font-bold underline">...</span>.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Controls -->
+    <footer class="fixed bottom-0 left-0 w-full p-6 glass backdrop-blur-md z-50">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <span class="text-[9px] text-gray-600 uppercase tracking-[0.2em]">Live PPP Index 2025</span>
+            <button onclick="refreshFact()" class="text-[10px] text-white border border-white/40 px-6 py-2 hover:bg-white hover:text-black transition uppercase tracking-widest">
+                New Perspective
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        const countries = [
+            { name: "China", ppp: 0.52, dailyFood: 3.50, avgIncome: 1050 },
+            { name: "Vietnam", ppp: 0.35, dailyFood: 1.50, avgIncome: 350 },
+            { name: "Nigeria", ppp: 0.28, dailyFood: 1.20, avgIncome: 200 },
+            { name: "India", ppp: 0.30, dailyFood: 1.10, avgIncome: 180 },
+            { name: "Switzerland", ppp: 1.60, dailyFood: 15.00, avgIncome: 6500 },
+            { name: "Mexico", ppp: 0.55, dailyFood: 3.50, avgIncome: 800 }
+        ];
+
+        const gratitudeHooks = [
+            "Your monthly gym membership could feed a student in rural Gansu, China for an entire month.",
+            "You have immediate access to clean, pressurized water—a luxury for 2 billion people.",
+            "Your 'emergency fund' is larger than the lifetime earnings of the average worker in Burundi.",
+            "The device you are using costs more than the annual minimum wage in 34 countries.",
+            "A single pair of designer sneakers equals 400 meals in parts of East Africa.",
+            "High-speed internet is a utility for you, but a distant luxury for 37% of the world."
+        ];
+
+        const incomeInput = document.getElementById('incomeInput');
+        const countrySelect = document.getElementById('countrySelect');
+        const modeToggle = document.getElementById('modeToggle');
+        const hookDisplay = document.getElementById('gratitude-hook');
+        const pppMultiplier = document.getElementById('pppMultiplier');
+        const localValue = document.getElementById('localValue');
+        const dailyBenefit = document.getElementById('dailyBenefit');
+        const pictogram = document.getElementById('pictogram');
+        const percentileText = document.getElementById('percentileText');
+
+        function init() {
+            countries.forEach((c, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = c.name;
+                opt.className = "bg-black text-white";
+                countrySelect.appendChild(opt);
+            });
+            renderPictogram();
+            updateCalculations();
+            refreshFact(); 
+        }
+
+        function refreshFact() {
+            hookDisplay.style.opacity = '0';
+            setTimeout(() => {
+                const randomFact = gratitudeHooks[Math.floor(Math.random() * gratitudeHooks.length)];
+                hookDisplay.innerText = `"${randomFact}"`;
+                hookDisplay.style.opacity = '1';
+            }, 300);
+        }
+
+        function renderPictogram() {
+            pictogram.innerHTML = '';
+            for (let i = 0; i < 100; i++) {
+                const dot = document.createElement('div');
+                dot.className = `h-2 w-2 rounded-full bg-gray-800 transition-all duration-700`;
+                pictogram.appendChild(dot);
+            }
+        }
+
+        function updateCalculations() {
+            const income = parseFloat(incomeInput.value) || 0;
+            const country = countries[countrySelect.value];
+            const mode = modeToggle.value;
+
+            // PPP calculation: 1/ppp gives the multiplier of how much further money goes
+            const relativePower = 1 / country.ppp;
+            const convertedValue = income * relativePower;
+            
+            document.querySelectorAll('.target-country-name').forEach(el => el.innerText = country.name);
+            pppMultiplier.innerText = `${relativePower.toFixed(1)}x Purchasing Power`;
+            localValue.innerText = `$${Math.round(convertedValue).toLocaleString()}`;
+            
+            const coffeePrice = 5;
+            const daysOfFood = Math.floor((coffeePrice * relativePower) / country.dailyFood);
+            dailyBenefit.innerText = `${daysOfFood} days of groceries`;
+
+            // Visualization logic
+            let highlightCount = 15;
+            if (mode === 'top1') {
+                highlightCount = 1;
+            } else {
+                // Heuristic: If income is 4x the local average, user is top 5%
+                if (income > (country.avgIncome * 4)) highlightCount = 5;
+                else if (income > (country.avgIncome * 2)) highlightCount = 15;
+                else highlightCount = 40;
+            }
+
+            const dots = pictogram.children;
+            for(let i = 0; i < 100; i++) {
+                dots[i].className = `h-2 w-2 rounded-full transition-all duration-500 ${i >= (100 - highlightCount) ? 'bg-white' : 'bg-gray-800'}`;
+            }
+            
+            percentileText.innerText = mode === 'top1' 
+                ? `The lifestyle of the top 1% in ${country.name}.`
+                : `Compared to the median earner in ${country.name}, you represent the top ${highlightCount}%.`;
+        }
+
+        incomeInput.addEventListener('input', updateCalculations);
+        countrySelect.addEventListener('change', updateCalculations);
+        modeToggle.addEventListener('change', updateCalculations);
+
+        init();
+    </script>
+</body>
+</html>
